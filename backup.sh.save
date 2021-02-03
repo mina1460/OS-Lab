@@ -1,0 +1,29 @@
+#!/bin/bash
+
+src=$1
+trgt=$2
+k=$3
+echo $src $trgt $k
+d=`date`
+date_no_space=`echo -e $d | sed -e 's/ /_/g'`
+date_no_colons=`echo -e $date_no_space | sed -e 's/:/_/g'`
+echo "The Date of the backup is: [ $d ]"
+echo -e "The modifed date is: [ $date_no_colons ]\n"
+if [[ $# -ne 3 ]]; then
+	echo "Usage: ./backup.sh source_directory destination_directory backup_key"
+else
+	mkdir "$trgt/$date_no_colons"
+	echo "[+] Working on it Now"
+	for d in $src/*/; do
+		if [ -d $d ]; then
+			dirname=`basename "${d}"`
+			echo "$dirname"
+			echo "$date_no_colons"
+			new_f="$dirname"
+			new_f"_""$date_no_colons"
+			#tar  -cvzf -P $d
+			echo "$new_F"
+			echo "$trgt""/""$new_F"".tar.gz"
+		fi
+	done
+fi
