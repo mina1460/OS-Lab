@@ -5,7 +5,7 @@ k=$3
 mkdir $dest/temp
 
 if [[ $# -ne 3 ]]; then
-	echo "Usage: ./backup.sh source_directory destination_directory backup_key"
+	echo "Usage: ./restore.sh backup_directory restore_directory restoration_key"
 else
 	for f in $src/*.gpg; do
 	[ -f "$f" ] || break
