@@ -33,6 +33,7 @@ else
 		[ -f "$f" ] || break
 		echo $f
 		tar -uvf "$ntrgt"_Full.tar -P $f
+		shred -u $f
 	done
 	gzip "$ntrgt"_Full.tar
 	gpg --pinentry-mode loopback --passphrase $k --symmetric "$ntrgt"_Full.tar.gz
