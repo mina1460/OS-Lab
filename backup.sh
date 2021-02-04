@@ -15,14 +15,15 @@ else
 	ntrgt="$trgt""/""$date_no_colons"
 	echo $ntrgt
 	echo "[+] Working on it Now"
-	for d in $src/*/; do
+	for d in $src/; do
 		if [ -d $d ]; then
 			dirname=`basename "${d}"`
 			new_f="$dirname""_""$date_no_colons"
-			tar  -cvzf "$ntrgt""/""$new_f"".tar.gz" -P $d
-			tar_name="$ntrgt""/""$new_f"".tar.gz"
+			tar  -czf "$new_f"".tar.gz" -P $d
+			tar_name="$new_f"".tar.gz"
 			#gpg -e -r mina146@aucegypt.edu $tar_name
 			gpg --pinentry-mode loopback --passphrase $k --symmetric $tar_name
+			mv ./$tar_name.gpg $trgt/$date_no_colons
 			shred -u $tar_name
 		fi
 	done
@@ -32,7 +33,7 @@ else
 	for f in $ntrgt/*.gpg; do
 		[ -f "$f" ] || break
 		echo $f
-		tar -uvf "$ntrgt"_Full.tar -P $f
+		tar -uf "$ntrgt"_Full.tar -P $f
 		shred -u $f
 	done
 	gzip "$ntrgt"_Full.tar
