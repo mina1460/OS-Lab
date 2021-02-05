@@ -15,9 +15,10 @@ else
 	ntrgt="$trgt""/""$date_no_colons"
 	echo $ntrgt
 	echo "[+] Working on it Now"
-	for d in $src/; do
+	for d in $src/*/; do
 		if [ -d $d ]; then
 			dirname=`basename "${d}"`
+			echo "dirname extracted: " $dirname
 			new_f="$dirname""_""$date_no_colons"
 			tar  -czf "$new_f"".tar.gz" -P $d
 			tar_name="$new_f"".tar.gz"
@@ -27,7 +28,7 @@ else
 			shred -u $tar_name
 		fi
 	done
-	#now I need to iterate over the newly created files and tar them 
+	#now I need to iterate over the newly created files and tar them
 	echo -e "[+] Done encrypting and compressing!\n"
 	tar -cf "$ntrgt"_Full.tar -T /dev/null
 	for f in $ntrgt/*.gpg; do
