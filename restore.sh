@@ -27,14 +27,15 @@ else
 	shred -u $f
 	done
 
-
 	cd $dest/temp/
+	rm -rf *.gpg
 	echo "currently at: "
 	pwd
 	for f in $dest/temp/*.gz; do
 		tar -xf $f -C $dest/temp
 		echo "[-] Deleting $f"
-		shred -u $f
+		rm -rf $f
+		rm -rf $f.gpg
 	done
 
 
