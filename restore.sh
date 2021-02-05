@@ -23,5 +23,14 @@ else
 	nom=$(basename $f .gpg)
 	gpg --pinentry-mode loopback --passphrase $k --output $dest/temp/"$nom" --decrypt $f
 	echo "[+] Decrypting $nom"
+	shred -u $f
 	done
+
+
+	cd $dest/temp/
+	pwd
+	gunzip -r ./
+	rm -rf *.gz
+
+
 fi
