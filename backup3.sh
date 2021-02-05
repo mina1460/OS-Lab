@@ -1,4 +1,5 @@
 #!/bin/bash
+shopt -s extglob
 src=$1
 trgt=$2
 k=$3
@@ -27,14 +28,15 @@ else
 	done
 	echo -e "[+] Done encrypting and compressing: \n"
 
-	#tar -cf $date_no_colons"_FULL.tar" -C $trgt/$date_no_colons -T /dev/null
-	#touch $date_no_colons"_FULL.tar"
-	#mv ./$date_no_colons"_FULL.tar" $trgt/$date_no_colons
+
 	full=$trgt/$date_no_colons/$date_no_colons"_FULL.tar"
 
 	(cd -P -- "$trgt/$date_no_colons" && printf '%s\0' *.gpg | tar --null -T - -zcvf -) > $full.gz
+
+	cd $trgt/$date_no_colons
+
+	echo "[+] Encrypting the tar that contains everything"
 	gpg --pinentry-mode loopback --passphrase $k --symmetric $full.gz
-	shred -u $full.gz
 
-
+	rm -v !("$date_no_colons""_FULL.tar.gz.gpg") 
 fi
