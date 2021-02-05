@@ -34,10 +34,7 @@ else
 	(cd -P -- "$trgt/$date_no_colons" && printf '%s\0' *.gpg | tar --null -T - -zcvf -) > $full.gz
 
 	cd $trgt/$date_no_colons
-	for f in $trgt/$date_no_colons/*; do
-		echo $f
-		tar -uvf $trgt/$date_no_colons/minakkk.tar $f
-	done
+
 
 
 	echo "[+] Encrypting the tar that contains everything"

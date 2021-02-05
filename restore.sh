@@ -23,14 +23,20 @@ else
 	nom=$(basename $f .gpg)
 	gpg --pinentry-mode loopback --passphrase $k --output $dest/temp/"$nom" --decrypt $f
 	echo "[+] Decrypting $nom"
+	echo -e "Will now delete $f \n"
 	shred -u $f
 	done
 
 
 	cd $dest/temp/
+	echo "currently at: "
 	pwd
-	gunzip -r ./
-	rm -rf *.gz
+	for f in $dest/temp/*.gz; do
+		tar -xf $f -C $dest/temp
+		echo "[-] Deleting $f"
+		shred -u $f
+	done
+
 
 
 fi
