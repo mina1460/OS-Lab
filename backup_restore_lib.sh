@@ -36,7 +36,8 @@ mkdir $trgt/$date_no_colons
 
 	rm -v !("$date_no_colons""_FULL.tar.gz.gpg"|"minakkk.tar")
 	echo "[+] DONE!"
-
+	echo "_____________________________________________________"
+	echo
 }
 
 function validate_backup_params(){
