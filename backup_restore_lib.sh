@@ -9,8 +9,10 @@ date_no_colons=`echo -e $date_no_space | sed -e 's/:/_/g'`
 echo "The Date of the backup is: [ $d ]"
 echo -e "The modified date is [ $date_no_colons ]\n"
 mkdir $trgt/$date_no_colons
+
+	tar -cf files_zipped.tar -T /dev/null
 	echo "[+] Starting the script now: "
-	for d in $src/*/; do
+	for d in $src/*; do
 		if [ -d $d ]; then
 			dirname=`basename "${d}"`
 			echo "dirname extracted: " $dirname
@@ -21,9 +23,18 @@ mkdir $trgt/$date_no_colons
 			mv ./$tar_name.gpg $trgt/$date_no_colons
 			shred -u $tar_name
 		fi
+		if [ -f $d ]; then
+			tar -uvf files_zipped.tar -P $d
+			echo "tarring files: [-] $d"	
+	fi
 	done
+	tar -czf ./files_zipped.tar.gz -P ./files_zipped.tar
+	#gpg --pinentry-mode loopback --passphrase $k --symmetric ./files_zipped.tar.gz
+	#rm -rf ./files_zipped.tar.gz
+	echo $k | gpg --batch -c --passphrase-fd 0 ./files_zipped.tar.gz
+	mv ./files_zipped.tar.gz.gpg $trgt/$date_no_colons
+	
 	echo -e "[+] Done encrypting and compressing: \n"
-
 
 	full=$trgt/$date_no_colons/$date_no_colons"_FULL.tar"
 
@@ -82,6 +93,8 @@ function restore(){
 	rm -rf *.gpg
 	echo "currently at: "
 	pwd
+	tar -xf files_zipped.tar.gz
+	tar -xf files_zipped.tar
 	for f in $dest/temp/*.gz; do
 		tar -xf $f -C $dest/temp
 		echo "[-] Deleting $f"
