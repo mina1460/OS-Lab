@@ -1,7 +1,4 @@
-//fix env variable display using echo $var
 //word expansion
-
-
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +8,9 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <stdbool.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #define BUFFER_LEN 1024
 
 extern char **environ;
@@ -143,7 +143,13 @@ int main(){
 		char *buf;
 		char *ptr;
 		
-		
+		int temp_in_f = dup(0);
+		int temp_out_f = dup(1);
+
+		int input_fd;
+		int output_fd;
+
+
 		size = pathconf(".", _PC_PATH_MAX);
 		if ((buf = (char *)malloc((size_t)size)) != NULL)
     		ptr = getcwd(buf, (size_t)size);
@@ -181,8 +187,9 @@ int main(){
 //check for input redirection
 		strcpy(line2, line);
 		char *infile;
+		bool input_red = false;
 		if(strchr(line2, '<') != NULL){
-			
+			input_red = true;
 			char* bef;
 			bef = strtok(line2, "<");
 			//printf("bef: %s\n", bef);
@@ -194,29 +201,36 @@ int main(){
 			//printf("here f2: %s\n", line);
 		}
 		
+		if (input_red)
+					input_fd = open(infile, O_RDONLY);
+		else input_fd = dup(temp_in_f);			
 
 		char* outfile;
 		strcpy(line2, line);
+		bool output_red = false;
+		bool trunc = false; 
+		bool append = false;
 
 		if(strstr(line2, ">>") != NULL){
 			
 			char* bef;
-			
+			append = true;
+			trunc = false;
+
 			outfile = strtok(strstr(line2, ">>")+2, " "); 
 			//printf("filename: %s\n", outfile);			
-		
 			strcpy( line,replaceWord(line, ">>", " "));
 			strcpy( line,replaceWord(line, outfile, " "));
 			//printf("new command: %s\n", line);
 		}
 		else if (strchr(line2, '>') != NULL){
-			
+			append = false;
+			trunc = true;
 			char* bef;
 			bef = strtok(line2, ">");
 			//printf("bef: %s\n", bef);
 			outfile = strtok(NULL, " "); 
 			//printf("filename: %s\n", file);			
-		
 			strcpy( line,replaceWord(line, ">", " "));
 			strcpy( line,replaceWord(line, outfile, " "));
 			//printf("here f2: %s\n", line);
