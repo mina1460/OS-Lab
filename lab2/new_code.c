@@ -1,5 +1,3 @@
-//word expansion
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,7 +13,31 @@
 
 extern char **environ;
 
+void set_cmd(int argc, char *argv[])
+{
+	int i;
+	if (argc != 1)
+	printf("Extra args\n");
+	else
+	for (i = 0; environ[i] != NULL; i++)
+	printf("%s\n", environ[i]);
+}
 
+void asg(int argc, char *argv[])
+{
+	char *name, *val;
+	if (argc != 1)
+		printf("Extra args\n");
+	else {
+		name = strtok(argv[0], "=");
+		val = strtok(NULL, ""); 
+		if (name == NULL || val == NULL)
+			printf("Bad command\n");
+		else
+			setenv(name, val, true);
+	}
+return;
+}
 char* replaceWord(const char* s, const char* oldW, 
                   const char* newW) 
 { 
@@ -24,23 +46,17 @@ char* replaceWord(const char* s, const char* oldW,
     int newWlen = strlen(newW); 
     int oldWlen = strlen(oldW); 
   
-    // Counting the number of times old word 
-    // occur in the string 
     for (i = 0; s[i] != '\0'; i++) { 
         if (strstr(&s[i], oldW) == &s[i]) { 
             cnt++; 
-  
-            // Jumping to index after the old word. 
             i += oldWlen - 1; 
         } 
     } 
   
-    // Making new string of enough length 
     result = (char*)malloc(i + cnt * (newWlen - oldWlen) + 1); 
   
     i = 0; 
     while (*s) { 
-        // compare the substring with the result 
         if (strstr(s, oldW) == s) { 
             strcpy(&result[i], newW); 
             i += newWlen; 
@@ -54,30 +70,6 @@ char* replaceWord(const char* s, const char* oldW,
     return result; 
 } 
 
-void set_cmd(int argc, char *argv[])
-{
-	int i;
-	if (argc != 1)
-	printf("Extra args\n");
-	else
-	for (i = 0; environ[i] != NULL; i++)
-	printf("%s\n", environ[i]);
-}
-void asg(int argc, char *argv[])
-{
-	char *name, *val;
-	if (argc != 1)
-		printf("Extra args\n");
-	else {
-		name = strtok(argv[0], "=");
-		val = strtok(NULL, ""); /* get all that's left */
-		if (name == NULL || val == NULL)
-			printf("Bad command\n");
-		else
-			setenv(name, val, true);
-	}
-return;
-}
 
 size_t read_command(char *cmd) 
 {
@@ -91,33 +83,82 @@ size_t read_command(char *cmd)
 	return strlen(cmd); 
 }
 
-int build_args(char * cmd, char ** argv) {
- char *token; 
- token = strtok(cmd," ");
+int build_args(char * cmd_o, char ** argv, char* outfile, char* infile, int* in, int *out) {
+ 	char *token; 
+ 	char cmd[BUFFER_LEN];
+ 	strcpy(cmd, cmd_o);
 
- int i=0;
- while(token!=NULL){
- 	argv[i]=token; 
- 	token = strtok(NULL," "); 
- 	//printf("in build_args argv[%d] = %s\n",i, argv[i]);
- 	i++; 
- }
+	token = strtok(cmd," ");
+
+	int i=0;
+	
+	 while(token!=NULL){
+	 	if (strcmp(token, ">")==0)
+	 	{
+	 		outfile = strtok(NULL, " ");	
+	 		*out = 1;
+	 	}
+	 	else if (strcmp(token, "<")==0)
+	 	{
+	 		infile = strtok(NULL, " ");	
+	 		*in = 1;
+	 	}
+	 	else {
+	 		argv[i]=token; 
+	 		token = strtok(NULL," "); 
+	 		i++;
+
+	 	}
+	 	
+	 }
  argv[i]=NULL; 
 	return i; 
 }
 
-
 void set_program_path (char * path, char * bin, char * prog) {
-	
 	memset (path,0,1024); 
 	strcpy(path, bin); 
  	strcat(path, prog); 
-	for(int i=0; i<strlen(path); i++) 
+ 	int i=0;
+	for(; i<strlen(path); i++) 
 		if(path[i]=='\n') path[i]='\0';
 }
 
+void handle_spaces(char* cmd){
+	int i = 0; 
+	char *special[] = {
+		  '<', 
+		  '>', 
+		  '|'
+		};
+
+	char* mod_cmd = (char*) malloc(1024);
+
+	int special_c = 3;
+	for (i = 0; i < strlen(cmd); i++){
+		int j = 0;
+		bool c = false;
+		for ( ;j < special_c; j++)
+		{
+			if (cmd[i] == special[j])
+			{
+				c = true;
+				strncat(mod_cmd, " ", 1);
+            	strncat(mod_cmd, &cmd[i], 1);
+            	strncat(mod_cmd, " ", 1);				
+			}
+		}
+		if (!c)
+		{
+			  strncat(mod_cmd, &cmd[i], 1);
+		}
+	}
+	strcpy(cmd, mod_cmd);
+	return;
+}
 
 int main(){
+
  char line[BUFFER_LEN]; 
  char line2[BUFFER_LEN];
  char* argv[100][100]; 
@@ -126,26 +167,33 @@ int main(){
  char path[1024]; 
  int argc; 
  int num_commands;
+ 
 
  int special_count = 3;
- char *commands[] = {
-  "cd", 
-  "clear", 
-  "set"
-};
-		const char *homedir;
+ char *commands[] = 
+ 	{
+		  "cd", 
+		  "clear", 
+		  "set"
+	};
 
-		if ((homedir = getenv("HOME")) == NULL) {
-    		homedir = getpwuid(getuid())->pw_dir;
-		}
+ const char *homedir;
 
-		if (chdir(homedir)==-1) printf("Cannot start from %s \n", homedir);		
+ if ((homedir = getenv("HOME")) == NULL) 
+       homedir = getpwuid(getuid())->pw_dir;
+		
 
-	while(1){
-		char* piped_cmds[100];
+ if (chdir(homedir)==-1) printf("Cannot start from %s \n", homedir);	
+
+ while(true)
+ {
+ 		char* piped_cmds[100];
 		long size;
 		char *buf;
 		char *ptr;
+		
+		char infile[1024];
+ 		char outfile[1024];
 		
 		int temp_in_f = dup(0);
 		int temp_out_f = dup(1);
@@ -153,8 +201,11 @@ int main(){
 		int input_fd;
 		int output_fd;
 
+		int in = 0; 
+		int out = 0;
 
-		size = pathconf(".", _PC_PATH_MAX);
+
+ 		size = pathconf(".", _PC_PATH_MAX);
 		if ((buf = (char *)malloc((size_t)size)) != NULL)
     		ptr = getcwd(buf, (size_t)size);
 		char * user_name = getenv("USER");
@@ -165,12 +216,11 @@ int main(){
 			printf("\n"); 
 			exit(0);
 		} 
- 	
- 		strcpy(line2, line); 
- 		if (strcmp(line, "exit") == 0) exit(0); 
+		
+		if (strcmp(line, "exit") == 0) exit(0); 
 
- 		//replace $var with its values and remove $var from the string 
 
+		strcpy(line2, line); 
  		if(strchr(line, '$') != NULL){
 			char *bef, *var;
 			char* content;
@@ -182,62 +232,13 @@ int main(){
 			strcpy( line,replaceWord(line, v, content));
 		
 		}
-
+		handle_spaces(line);
 		strcpy(line2, line);
-		char *infile;
-		bool input_red = false;
-		if(strchr(line2, '<') != NULL){
-			input_red = true;
-			char* bef;
-			bef = strtok(line2, "<");
-			infile = strtok(NULL, " "); 		
-			strcpy( line,replaceWord(line, "<", " "));
-			strcpy( line,replaceWord(line, infile, " "));
-		}
 		
-		if (input_red){
-					input_fd = open(infile, O_RDONLY);
-				}
-		else input_fd = dup(temp_in_f);			
-
-		char* outfile;
-		strcpy(line2, line);
-		bool output_red = false;
-		bool trunc = false; 
-		bool append = false;
-
-		if(strstr(line2, ">>") != NULL){
-			
-			char* bef;
-			append = true;
-			trunc = false;
-			output_red = true;
-			outfile = strtok(strstr(line2, ">>")+2, " "); 
-					
-			strcpy( line,replaceWord(line, ">>", " "));
-			strcpy( line,replaceWord(line, outfile, " "));
-			
-		}
-		else if (strchr(line2, '>') != NULL){
-			append = false;
-			trunc = true;
-			output_red = true;
-			char* bef;
-			bef = strtok(line2, ">");
-			outfile = strtok(NULL, " "); 
-			strcpy( line,replaceWord(line, ">", " "));
-			strcpy( line,replaceWord(line, outfile, " "));
-			
-		}
-		
-		char f[100];
-		strcpy(f, outfile);
-
-		strcpy(line2, line); 
  		num_commands = 0;	
  		char delim [] = "|";
  		char* parsed_cmd = strtok(line2, delim);
-		char cp_parsed_cmd[200];
+		char cp_parsed_cmd[1024];
 		int k = 0;
 		while(parsed_cmd != NULL){
 		 	strcpy(cp_parsed_cmd, parsed_cmd);
@@ -248,9 +249,17 @@ int main(){
 		}
 		int c = 0;
 		for (c = 0; c < k; c++)
-			argc = build_args(piped_cmds[c], argv[c]);
+			argc = build_args(piped_cmds[c], argv[c], infile, outfile, &in, &out);
 		
 		int loop_cmd = 0;
+		if (in){
+					input_fd = open(infile, O_RDONLY);
+					if (input_fd < 0)
+					{
+						perror("failed to open input file: ");
+					}
+				}
+		else input_fd = dup(temp_in_f);		
 		
 for (loop_cmd = 0; loop_cmd < k; loop_cmd++)
 {
@@ -259,20 +268,12 @@ for (loop_cmd = 0; loop_cmd < k; loop_cmd++)
 	
 	if (loop_cmd == k - 1)
 	{
-		if (output_red)
+		if (out)
 				{
-					if (trunc)
-					{
-						printf("outfile: %s\n", f);
+					
+						printf("outfile: %s\n", outfile);
 						output_fd = open(outfile, O_CREAT|O_TRUNC|O_WRONLY, 0644);
 						
-					}
-					else if (append)
-					{
-						printf("outfile: %s\n", f);
-						output_fd = open(outfile, O_CREAT|O_APPEND|O_WRONLY, 0644);
-
-					}
 					if (output_fd == -1)
 						{
 							perror("failed to open file");
@@ -294,7 +295,7 @@ for (loop_cmd = 0; loop_cmd < k; loop_cmd++)
 		output_fd = fdpipe[1];
 		input_fd = fdpipe[0];
 	}
-	if(dup2(output_fd, 1)<0) perror("failure in line 295");
+	if(dup2(output_fd, 1)<0) perror("failure in line 297");
 	close(output_fd);
 			
  		int i = 0;
