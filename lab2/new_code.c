@@ -11,6 +11,10 @@
 
 #define BUFFER_LEN 1024
 
+char infile [1024];
+char outfile [1024];
+char * between_ticks;
+
 extern char **environ;
 
 void set_cmd(int argc, char *argv[])
@@ -29,12 +33,22 @@ void asg(int argc, char *argv[])
 	if (argc != 1)
 		printf("Extra args\n");
 	else {
+		name = (char *) malloc(1024);
+		val = (char *) malloc(1024);
 		name = strtok(argv[0], "=");
-		val = strtok(NULL, ""); 
+		val = strtok(NULL, "");
+		
 		if (name == NULL || val == NULL)
 			printf("Bad command\n");
 		else
-			setenv(name, val, true);
+			{
+				char n[1024];
+				char v[1024];
+				strcpy(n, name);
+				strcpy(v, val);
+				setenv(n, v, true);
+			}
+
 	}
 return;
 }
@@ -83,28 +97,36 @@ size_t read_command(char *cmd)
 	return strlen(cmd); 
 }
 
-int build_args(char * cmd_o, char ** argv, char* outfile, char* infile, int* in, int *out) {
+int build_args(char * cmd_o, char ** argv, int* in, int *out) {
  	char *token; 
  	char cmd[BUFFER_LEN];
  	strcpy(cmd, cmd_o);
 
 	token = strtok(cmd," ");
-
 	int i=0;
 	
 	 while(token!=NULL){
+	 
 	 	if (strcmp(token, ">")==0)
 	 	{
-	 		outfile = strtok(NULL, " ");	
+	 		token = strtok(NULL, " ");	
+	 		char* t_out_file;
+	 		t_out_file = (char *) malloc(BUFFER_LEN);
+	 		strcpy(t_out_file, token);
+	 		strcpy(outfile, t_out_file);
 	 		*out = 1;
 	 	}
 	 	else if (strcmp(token, "<")==0)
 	 	{
-	 		infile = strtok(NULL, " ");	
+	 		token = strtok(NULL, " ");	
+	 		char* t_in_file;
+	 		t_in_file = (char *) malloc(BUFFER_LEN);
+	 		strcpy(t_in_file, token);
+	 		strcpy(infile, t_in_file);
 	 		*in = 1;
 	 	}
 	 	else {
-	 		argv[i]=token; 
+	 		argv[i]=strdup(token); 
 	 		token = strtok(NULL," "); 
 	 		i++;
 
@@ -157,6 +179,22 @@ void handle_spaces(char* cmd){
 	return;
 }
 
+bool check_ticks(char* cmd){
+	if(strchr(cmd, '`') != NULL){
+		char * x = strchr(cmd, '`');
+		char * y = strrchr(cmd, '`');
+		if (x==y) return false;
+		else return true;
+	}
+	else return false;
+}
+void parse_ticks(char* cmd){
+	char * parsed_cmd = (char *) calloc(1024, sizeof(char));
+	strncat(parsed_cmd, strchr(cmd, '`')+1, (strrchr(cmd, '`')-strchr(cmd, '`')-sizeof(char))/sizeof(char));
+	parsed_cmd[(strrchr(cmd, '`')-strchr(cmd, '`'))] = '\0'; 
+	strcpy(between_ticks, parsed_cmd);
+}
+
 int main(){
 
  char line[BUFFER_LEN]; 
@@ -192,14 +230,8 @@ int main(){
 		char *buf;
 		char *ptr;
 		
-		char infile[1024];
- 		char outfile[1024];
 		
-		int temp_in_f = dup(0);
-		int temp_out_f = dup(1);
-
-		int input_fd;
-		int output_fd;
+ 		int p[2];
 
 		int in = 0; 
 		int out = 0;
@@ -221,19 +253,35 @@ int main(){
 
 
 		strcpy(line2, line); 
- 		if(strchr(line, '$') != NULL){
+ 		if(strchr(line2, '$') != NULL){
 			char *bef, *var;
-			char* content;
+			bef = (char*) malloc(1024);
+			char* content = (char*) malloc(1024);
+			var = (char*) malloc(1024);
 			bef = strtok(line2, "$");
-			var = strtok(NULL, " "); 
+			var = strtok(NULL, " ");
 			content = getenv(var);
-			char v[] = "$";
+			char v[1024] = "$";
 			strcat(v, var);
-			strcpy( line,replaceWord(line, v, content));
+			strcpy( line2,replaceWord(line, v, content));
 		
 		}
+		strcpy(line, line2);
 		handle_spaces(line);
 		strcpy(line2, line);
+		bool ticks = check_ticks(line2);
+	
+		if (ticks)
+		{
+			char* tick_var = (char * ) malloc(1024);
+			tick_var = strtok(line2, " =");
+			char ticks_cmd [BUFFER_LEN];	
+			between_ticks = (char *) calloc(1024, sizeof(char));
+			parse_ticks(line);
+			
+		}
+		strcpy(line2, line);
+
 		
  		num_commands = 0;	
  		char delim [] = "|";
@@ -249,54 +297,58 @@ int main(){
 		}
 		int c = 0;
 		for (c = 0; c < k; c++)
-			argc = build_args(piped_cmds[c], argv[c], infile, outfile, &in, &out);
+			{
+				argc = build_args(piped_cmds[c], argv[c], &in, &out);
+			}
 		
-		int loop_cmd = 0;
+	int temp_in_f = dup(0);
+	int temp_out_f = dup(1);
+	int pid;
+	int loop_cmd = 0;
+			
+for (loop_cmd = 0; loop_cmd < k; loop_cmd++)
+{
+	if (loop_cmd == 0)
+	{
+		p[0] = dup(temp_in_f);
 		if (in){
-					input_fd = open(infile, O_RDONLY);
-					if (input_fd < 0)
+					
+					p[0] = open(infile, O_RDONLY);
+					if (p[0] < 0)
 					{
 						perror("failed to open input file: ");
 					}
+					strcpy(infile, "");
+
 				}
-		else input_fd = dup(temp_in_f);		
-		
-for (loop_cmd = 0; loop_cmd < k; loop_cmd++)
-{
-	dup2(input_fd, 0);
-	close(input_fd);
+
+	}
+	
+	dup2(p[0], 0);
+	close(p[0]);
 	
 	if (loop_cmd == k - 1)
 	{
+		p[1] = dup(temp_out_f);
 		if (out)
 				{
-					
-						printf("outfile: %s\n", outfile);
-						output_fd = open(outfile, O_CREAT|O_TRUNC|O_WRONLY, 0644);
-						
-					if (output_fd == -1)
-						{
-							perror("failed to open file");
-						}
+						p[1] = open(outfile,  O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+						strcpy(outfile, "");
 				}		
-		else 
-		{
-			output_fd = dup(temp_out_f);
-			if (output_fd == -1)
+				if (p[1] == -1)
 						{
-							perror("failed to open file");
+							perror("failed to open output file");
 						}
-
-		}
+		
 	}
 	else {
 		int fdpipe[2];
 		if(pipe(fdpipe)<0) perror("failure in piping: ");
-		output_fd = fdpipe[1];
-		input_fd = fdpipe[0];
+		p[1] = fdpipe[1];
+		p[0] = fdpipe[0];
 	}
-	if(dup2(output_fd, 1)<0) perror("failure in line 297");
-	close(output_fd);
+	if(dup2(p[1], 1)<0) perror("failure in ldup2 of p[1]");
+	close(p[1]);
 			
  		int i = 0;
  		bool  set = false;
@@ -339,21 +391,24 @@ for (loop_cmd = 0; loop_cmd < k; loop_cmd++)
 			asg(argc, argv[loop_cmd]);
 		
  		else{
- 			int pid= fork(); 	
+ 			pid= fork(); 	
  			if(pid==0)
- 			{ 
+ 			{ 	
+ 				
  				execve(path,argv[loop_cmd],0); 
  				fprintf(stderr, "Child process could not do execve\n");
+ 				exit(15);
  			}
- 			else wait(NULL); 
 		}
 	}
 	
 }
+
 	if(dup2(temp_in_f, 0) == -1) perror("failed to restore stdin");
 	if(dup2(temp_out_f,1) < 0) perror("failed to restore stdout");
 	close(temp_in_f);
 	close(temp_out_f);
+	waitpid(pid, NULL, WUNTRACED);
 
 }
 	return 0;
