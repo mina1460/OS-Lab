@@ -101,6 +101,7 @@ size_t read_command(char *cmd)
 int build_args(char * cmd_o, char ** argv, int* in, int *out) {
  	char *token; 
  	char *cmd = (char *) malloc(BUFFER_LEN);
+ 
  	strcpy(cmd, cmd_o);
 
 	token = strtok(cmd," ");
@@ -127,7 +128,9 @@ int build_args(char * cmd_o, char ** argv, int* in, int *out) {
 	 		*in = 1;
 	 	}
 	 	else {
-	 		argv[i]=strdup(token); 
+	 		argv[i] = (char * ) malloc(1024);
+	 		strcpy(argv[i], token);
+	 		
 	 		token = strtok(NULL," "); 
 	 		i++;
 
@@ -294,9 +297,11 @@ int main(){
  		char* parsed_cmd = strtok(line2, delim);
 		char cp_parsed_cmd[1024];
 		int k = 0;
+
 		while(parsed_cmd != NULL){
 		 	strcpy(cp_parsed_cmd, parsed_cmd);
-			piped_cmds[k] = strdup(cp_parsed_cmd);
+			piped_cmds[k] = (char *) malloc(BUFFER_LEN);
+			strcpy(piped_cmds[k], cp_parsed_cmd);
 			num_commands++;
 		    parsed_cmd = strtok(NULL, delim);
 		    ++k;
