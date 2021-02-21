@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <glob.h>
 
 #define BUFFER_LEN 1024
 
@@ -26,38 +27,6 @@ void set_cmd(int argc, char *argv[])
 	else
 	for (i = 0; environ[i] != NULL; i++)
 	printf("%s\n", environ[i]);
-}
-void remove_spaces(char* s) {
-    const char* d = s;
-    do {
-        while (*d == ' ') {
-            ++d;
-        }
-    } while (*s++ = *d++);
-}
-void setenv_mina(char* cmd){
-	char *name, *val;
-	char cmd_cp [1024];
-	strcpy(cmd_cp, cmd);
-	remove_spaces(cmd_cp);
-
-	name = (char *) malloc(1024);
-		val = (char *) malloc(2048);
-		name = strtok(cmd_cp, " =");
-		val = strtok(NULL, " ");
-		if (name == NULL || val == NULL)
-			printf("Bad command\n");
-		else
-			{
-				char n[1024];
-				char v[2048];
-				strcpy(n, name);
-				printf("n: %s\n",n);
-				strcpy(v, val);
-				printf("v: %s\n",v);
-				setenv(n, v, true);
-			}
-
 }
 
 void asg(int argc, char *argv[])
@@ -132,7 +101,7 @@ size_t read_command(char *cmd)
 
 int build_args(char * cmd_o, char ** argv, int* in, int *out) {
  	char *token; 
- 	char cmd[BUFFER_LEN];
+ 	char *cmd = (char *) malloc(BUFFER_LEN);
  	strcpy(cmd, cmd_o);
 
 	token = strtok(cmd," ");
@@ -282,7 +251,12 @@ int main(){
 			exit(0);
 		} 
 		
-		if (strcmp(line, "exit") == 0) exit(0); 
+		if (strcmp(line, "exit") == 0) exit(0);
+		if(strchr(line, '*') != NULL){
+			glob_t g_buffer;
+			const char* pattern = 
+		
+		} 
 
 
 		strcpy(line2, line); 
@@ -319,7 +293,7 @@ int main(){
 		 	strcpy(tick_var_cp, tick_var);
 		
 		strcpy(line2, line);
-		
+
 		
  		num_commands = 0;	
  		char delim [] = "|";
@@ -430,15 +404,11 @@ for (loop_cmd = 0; loop_cmd < k; loop_cmd++)
 		}
 		}
 		else{
-	
-
+		
 		set_program_path (path,bin,argv[loop_cmd][0]); 
- 		printf("%s\n",piped_cmds[loop_cmd]);
  		
 		if (strchr(argv[loop_cmd][0], '=') != NULL)
-			{ asg(argc, argv[loop_cmd]);}
-		else if (strchr(piped_cmds[loop_cmd], '=') != NULL)
-			{setenv_mina(piped_cmds[loop_cmd]);}
+			asg(argc, argv[loop_cmd]);
 		
  		else{
  			pid= fork(); 	
@@ -476,4 +446,3 @@ for (loop_cmd = 0; loop_cmd < k; loop_cmd++)
 }
 	return 0;
 }
-

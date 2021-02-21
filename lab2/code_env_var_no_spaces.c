@@ -27,39 +27,31 @@ void set_cmd(int argc, char *argv[])
 	for (i = 0; environ[i] != NULL; i++)
 	printf("%s\n", environ[i]);
 }
-void remove_spaces(char* s) {
-    const char* d = s;
-    do {
-        while (*d == ' ') {
-            ++d;
-        }
-    } while (*s++ = *d++);
-}
-void setenv_mina(char* cmd){
-	char *name, *val;
-	char cmd_cp [1024];
+void setenv_mod(char* cmd){
+	char cmd_cp[1024];
 	strcpy(cmd_cp, cmd);
-	remove_spaces(cmd_cp);
-
-	name = (char *) malloc(1024);
-		val = (char *) malloc(2048);
-		name = strtok(cmd_cp, " =");
-		val = strtok(NULL, " ");
-		if (name == NULL || val == NULL)
+	char* var = (char *) malloc(1024);
+	char* val = (char *) malloc(1024);
+	var = strtok(cmd_cp, " =");
+	printf("var:%s.\n", var);
+	strcpy(cmd_cp, cmd);
+	val = strtok(strchr(strchr(cmd_cp, '=')+1, ' ')+1, "");
+	printf("val:%s.\n",val);
+	if (var == NULL || val == NULL)
 			printf("Bad command\n");
-		else
-			{
+	else {
 				char n[1024];
 				char v[2048];
-				strcpy(n, name);
+				strcpy(n, var);
 				printf("n: %s\n",n);
 				strcpy(v, val);
-				printf("v: %s\n",v);
+				printf("v: %s\n", v);
 				setenv(n, v, true);
 			}
 
-}
 
+
+}
 void asg(int argc, char *argv[])
 {
 	char *name, *val;
@@ -292,16 +284,20 @@ int main(){
 			char* content = (char*) malloc(1024);
 			var = (char*) malloc(1024);
 			bef = strtok(line2, "$");
-			var = strtok(NULL, " ");
+			var = strtok(NULL, " `");
+			
 			content = getenv(var);
+		
 			char v[1024] = "$";
 			strcat(v, var);
 			strcpy( line2,replaceWord(line, v, content));
+			
 		
 		}
 		strcpy(line, line2);
 		handle_spaces(line);
 		strcpy(line2, line);
+		
 		bool ticks = check_ticks(line2);
 
 		tick_var = (char * ) malloc(1024);
@@ -319,7 +315,7 @@ int main(){
 		 	strcpy(tick_var_cp, tick_var);
 		
 		strcpy(line2, line);
-		
+
 		
  		num_commands = 0;	
  		char delim [] = "|";
@@ -430,15 +426,14 @@ for (loop_cmd = 0; loop_cmd < k; loop_cmd++)
 		}
 		}
 		else{
-	
-
+		
 		set_program_path (path,bin,argv[loop_cmd][0]); 
- 		printf("%s\n",piped_cmds[loop_cmd]);
  		
-		if (strchr(argv[loop_cmd][0], '=') != NULL)
-			{ asg(argc, argv[loop_cmd]);}
-		else if (strchr(piped_cmds[loop_cmd], '=') != NULL)
-			{setenv_mina(piped_cmds[loop_cmd]);}
+		if (strchr(argv[loop_cmd][0], '=') != NULL && argc == 1)
+			asg(argc, argv[loop_cmd]);
+		else if (strchr(piped_cmds[loop_cmd], '=') != NULL){
+			setenv_mod(piped_cmds[loop_cmd]);
+		}
 		
  		else{
  			pid= fork(); 	
@@ -476,4 +471,3 @@ for (loop_cmd = 0; loop_cmd < k; loop_cmd++)
 }
 	return 0;
 }
-
