@@ -14,6 +14,7 @@
 char infile [1024];
 char outfile [1024];
 char * between_ticks;
+char* tick_var;
 
 extern char **environ;
 
@@ -34,7 +35,7 @@ void asg(int argc, char *argv[])
 		printf("Extra args\n");
 	else {
 		name = (char *) malloc(1024);
-		val = (char *) malloc(1024);
+		val = (char *) malloc(2048);
 		name = strtok(argv[0], "=");
 		val = strtok(NULL, "");
 		
@@ -43,7 +44,7 @@ void asg(int argc, char *argv[])
 		else
 			{
 				char n[1024];
-				char v[1024];
+				char v[2048];
 				strcpy(n, name);
 				strcpy(v, val);
 				setenv(n, v, true);
@@ -270,16 +271,21 @@ int main(){
 		handle_spaces(line);
 		strcpy(line2, line);
 		bool ticks = check_ticks(line2);
-	
+
+		tick_var = (char * ) malloc(1024);
 		if (ticks)
 		{
-			char* tick_var = (char * ) malloc(1024);
+			
 			tick_var = strtok(line2, " =");
 			char ticks_cmd [BUFFER_LEN];	
 			between_ticks = (char *) calloc(1024, sizeof(char));
 			parse_ticks(line);
-			
+			strcpy(line, between_ticks);
 		}
+		char tick_var_cp [100];
+		if (ticks)
+		 	strcpy(tick_var_cp, tick_var);
+		
 		strcpy(line2, line);
 
 		
@@ -334,11 +340,19 @@ for (loop_cmd = 0; loop_cmd < k; loop_cmd++)
 				{
 						p[1] = open(outfile,  O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 						strcpy(outfile, "");
+				}
+				else if(ticks){
+					int fdpipe[2];
+					if(pipe(fdpipe)<0) perror("failure in piping: ");
+					p[1] = fdpipe[1];
+					p[0] = fdpipe[0];
+
 				}		
-				if (p[1] == -1)
-						{
-							perror("failed to open output file");
-						}
+				
+		if (p[1] == -1)
+		{
+			perror("failed to open output file");
+		}				
 		
 	}
 	else {
@@ -347,7 +361,7 @@ for (loop_cmd = 0; loop_cmd < k; loop_cmd++)
 		p[1] = fdpipe[1];
 		p[0] = fdpipe[0];
 	}
-	if(dup2(p[1], 1)<0) perror("failure in ldup2 of p[1]");
+	if(dup2(p[1], 1)<0) perror("failure in dup2 of p[1]");
 	close(p[1]);
 			
  		int i = 0;
@@ -402,13 +416,30 @@ for (loop_cmd = 0; loop_cmd < k; loop_cmd++)
 		}
 	}
 	
-}
+}	
+			char buffer[2*BUFFER_LEN];
+			char buf2[2*BUFFER_LEN];
+			if (ticks){
+				read(p[0], buffer, sizeof(buffer));
+				strncat(buf2, tick_var_cp, strlen(tick_var_cp)*sizeof(char));
+				strncat(buf2, "=", sizeof(char));
+				strncat(buf2, buffer, strlen(buffer)*sizeof(char));
+			
+				if (setenv (tick_var_cp, buffer, true) < 0){
+					perror("Error setting environment variable");
+				}
+			}
 
 	if(dup2(temp_in_f, 0) == -1) perror("failed to restore stdin");
 	if(dup2(temp_out_f,1) < 0) perror("failed to restore stdout");
 	close(temp_in_f);
 	close(temp_out_f);
 	waitpid(pid, NULL, WUNTRACED);
+	if (ticks)
+	{
+		printf("%s\n",tick_var);
+		printf("%s\n",buf2);
+	}
 
 }
 	return 0;
